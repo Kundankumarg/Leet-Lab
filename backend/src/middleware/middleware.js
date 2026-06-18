@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import { db } from "../libs/db.js";
 
 
-export const authMiddleware = async(req, res, next) => {
-    
+export const authMiddleware = async (req, res, next) => {
+
     try {
         const token = req.cookies.jwt || req.cookies.token;
 
@@ -14,7 +14,7 @@ export const authMiddleware = async(req, res, next) => {
         }
 
         const decoded = jwt.verify(
-            token, 
+            token,
             process.env.JWT_SECRET
         );
 
@@ -25,10 +25,10 @@ export const authMiddleware = async(req, res, next) => {
             },
             select: {
                 id: true,
-                email: true,  
+                email: true,
                 name: true,
                 role: true,
-                image: true  
+                image: true
             }
         });
 
@@ -38,7 +38,7 @@ export const authMiddleware = async(req, res, next) => {
             });
         }
         req.user = user;
-        next(); 
+        next();
 
 
     } catch (error) {
@@ -47,5 +47,34 @@ export const authMiddleware = async(req, res, next) => {
             message: "Internal server error"
         });
     }
-   
+
 };
+
+
+export const checkAdmin = async (req, res, next) => {
+
+    try {
+        const userId = req.user.id;
+        const user = await db.user.findUnique({
+            where: {
+                id: userId
+            },
+            select: {
+                role: true
+            }
+        })
+
+        if (!user || user.role !== "ADMIN") {
+            return res.status(403).json({
+                message: "Access denied-Admin role required"
+            })
+        }
+
+        next();
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
