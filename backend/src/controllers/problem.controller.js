@@ -1,53 +1,191 @@
 import { db } from "../libs/db.js";
-import { poolBatchResults, submitBatch } from "../libs/judge0.lib.js";
-import { getJudeg0LanguageId } from "../libs/judge0.lib.js";
+import {
+    poolBatchResults,
+    submitBatch,
+    getJudeg0LanguageId
+} from "../libs/judge0.lib.js";
 
+const sleep = (ms) =>
+    new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
 
 export const createProblem = async (req, res) => {
-    const { title, description, difficulty, tags, example, constraints, testCases, codeSnippets, referenceSolution } = req.body;
 
-    // going to check the user role once again
+    const {
+        title,
+        description,
+        difficulty,
+        tags,
+        example,
+        constraints,
+        testCases,
+        codeSnippets,
+        referenceSolutions
+    } = req.body;
+
     if (req.user.role !== "ADMIN") {
         return res.status(403).json({
-            message: "You are not allowed to create a problem"
+            message:
+                "You are not allowed to create a problem"
         });
     }
 
     try {
 
-        for (const [language, solutionCode] of Object.entries(referenceSolution)) {
+        for (
+            const [language, solutionCode]
+            of Object.entries(referenceSolutions)
+        ) {
 
-            const languageId = getJudeg0LanguageId(language);
+            console.log(
+                `\n========== ${language} ==========\n`
+            );
+
+            const languageId =
+                getJudeg0LanguageId(language);
 
             if (!languageId) {
                 return res.status(400).json({
-                    error: `Language ${language} is not supported`
-                })
+                    error:
+                        `Language ${language} is not supported`
+                });
             }
 
-            const submissions = testCases.map(({ input, output }) => ({
-                language_id: languageId,
-                source_code: solutionCode,
-                stdin: input,
-                expected_output: output
-            }))
+            let results = [];
 
-            const submissionResult = await submitBatch(submissions);
-            const tokens = submissionResult.map((res) => res.token);
-            const results = await poolBatchResults(tokens);
+            if (
+                language === "JAVA" ||
+                language === "CPP" ||
+                language === "C"
+            ) {
 
-            for (let i = 0; i < results.length; i++) {
+                for (
+                    let i = 0;
+                    i < testCases.length;
+                    i++
+                ) {
 
-                const result = results[i];
-                if (result.status.id !== 3) {
+                    const tc =
+                        testCases[i];
+
+                    console.log(
+                        `Running testcase ${i + 1}`
+                    );
+
+                    const submissionResult =
+                        await submitBatch([
+                            {
+                                language_id:
+                                    languageId,
+                                source_code:
+                                    solutionCode,
+                                stdin:
+                                    tc.input,
+                                expected_output:
+                                    tc.output
+                            }
+                        ]);
+
+                    const tokens =
+                        submissionResult.map(
+                            r => r.token
+                        );
+
+                    const result =
+                        await poolBatchResults(
+                            tokens
+                        );
+
+                    results.push(
+                        result[0]
+                    );
+
+                    // important for Java/C++
+                    await sleep(2000);
+                }
+
+            } else {
+
+                const submissions =
+                    testCases.map(
+                        ({ input, output }) => ({
+                            language_id:
+                                languageId,
+                            source_code:
+                                solutionCode,
+                            stdin:
+                                input,
+                            expected_output:
+                                output
+                        })
+                    );
+
+                const submissionResult =
+                    await submitBatch(
+                        submissions
+                    );
+
+                const tokens =
+                    submissionResult.map(
+                        r => r.token
+                    );
+
+                results =
+                    await poolBatchResults(
+                        tokens
+                    );
+            }
+
+            for (
+                let i = 0;
+                i < results.length;
+                i++
+            ) {
+
+                const result =
+                    results[i];
+
+                console.log(
+                    "Language:",
+                    language
+                );
+
+                console.log(
+                    "Status:",
+                    result.status
+                );
+
+                console.log(
+                    "Stdout:",
+                    result.stdout
+                );
+
+                console.log(
+                    "Expected:",
+                    testCases[i].output
+                );
+
+                console.log(
+                    "Result-------",
+                    result
+                );
+
+                if (
+                    result.status.id !== 3
+                ) {
+
                     return res.status(400).json({
-                        error: `Testcase ${i + 1} failed for language ${language}`
-                    })
+                        error:
+                            `Testcase ${i + 1} failed for language ${language}`,
+                        details: result
+                    });
                 }
             }
+        }
 
-            // save the problem to the database
-            const newProblem = await db.problem.create({
+        const newProblem =
+            await db.problem.create({
                 data: {
                     title,
                     description,
@@ -57,32 +195,39 @@ export const createProblem = async (req, res) => {
                     constraints,
                     testCases,
                     codeSnippets,
-                    referenceSolution,
-                    userId: req.user.id,
+                    referenceSolutions,
+                    userId:
+                        req.user.id,
                 }
             });
 
-            return res.status(201).json({
-                newProblem, 
-                message: "Problem created successfully"
-            });
+        return res.status(201).json({
+            newProblem,
+            message:
+                "Problem created successfully"
+        });
 
-        }
+    } catch (err) {
+
+        console.error(
+            "Error creating problem:",
+            err
+        );
+
+        return res.status(500).json({
+            error:
+                "An error occurred while creating the problem"
+        });
     }
-    catch (err) {
+};
 
-    }
-}
+export const getAllProblems = async (req, res) => { };
 
-export const getAllProblems = async (req, res) => { }
+export const getProblemById = async (req, res) => { };
 
-export const getProblemById = async (req, res) => { }
+export const updateProblem = async (req, res) => { };
 
-export const updateProblem = async (req, res) => { }
+export const deleteProblem = async (req, res) => { };
 
-export const deleteProblem = async (req, res) => { }
-
-export const getAllProblemsSolvedByUser = async (req, res) => { }
-
-
-
+export const getAllProblemsSolvedByUser =
+    async (req, res) => { };

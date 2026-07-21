@@ -1,11 +1,42 @@
 generator client {
   provider = "prisma-client-js"
-  output = "../src/generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  image     String?
+  role      UserRole  @default(USER)
+  problems  Problem[]
+}
+
+model Problem {
+  id                String     @id @default(uuid())
+  title             String
+  description       String
+  difficulty        Difficulty
+  tags              String[]
+  userId            String
+  example           Json
+  constraints       String[]
+  hints             String?
+  editorial         String?
+  testCases         Json
+  codeSnippets      Json
+  referenceSolutions Json
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {
@@ -17,40 +48,4 @@ enum Difficulty {
   EASY
   MEDIUM
   HARD
-}
-
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  image     String?
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  problems   Problem[]
-}
-
-model Problem {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  difficulty  Difficulty
-  tags        String[] // ["tag1", "tag2", "tag3"]
-  userId      String
-  example     Json
-  constraints String[]
-  hints       String?
-  editorial   String?
-
-  testCases   Json
-  codeSnippets Json
-  referenceSolution Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
