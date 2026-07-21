@@ -2,8 +2,8 @@ import { db } from "../libs/db.js";
 import {
     poolBatchResults,
     submitBatch,
-    getJudeg0LanguageId
-} from "../libs/judge0.lib.js";
+    getLanguageId
+} from "../libs/codebox.lib.js";
 
 const sleep = (ms) =>
     new Promise(resolve =>
@@ -43,7 +43,7 @@ export const createProblem = async (req, res) => {
             );
 
             const languageId =
-                getJudeg0LanguageId(language);
+                getLanguageId(language);
 
             if (!languageId) {
                 return res.status(400).json({
@@ -54,6 +54,7 @@ export const createProblem = async (req, res) => {
 
             let results = [];
 
+            // Java, C and C++ sequential execution
             if (
                 language === "JAVA" ||
                 language === "CPP" ||
@@ -101,12 +102,13 @@ export const createProblem = async (req, res) => {
                         result[0]
                     );
 
-                    // important for Java/C++
+                    // Important for Java/C/C++
                     await sleep(2000);
                 }
 
             } else {
 
+                // Python and JavaScript batch execution
                 const submissions =
                     testCases.map(
                         ({ input, output }) => ({
