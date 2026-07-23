@@ -223,9 +223,59 @@ export const createProblem = async (req, res) => {
     }
 };
 
-export const getAllProblems = async (req, res) => { };
+export const getAllProblems = async (req, res) => {
 
-export const getProblemById = async (req, res) => { };
+    try {
+        const problems = await db.problem.findMany();
+        if (!problems) {
+            return res.status(404).json({
+                error: "No problem found"
+
+            })
+        }
+
+        res.status(200).json({
+            sucess: true,
+            message: "Message Fetched Successfully",
+            problems
+        })
+    }
+    catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            error: "Error while Fetching Problem",
+        });
+    }
+};
+
+export const getProblemById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const problem = await db.problem.findUnique(
+            {
+                where: {
+                    id
+                }
+            }
+        )
+
+        if (!problem) {
+            return res.status(404).json({ error: "Problem not found" })
+        }
+
+        return res.status(200).json({
+            sucess: true,
+            message: "Message Fetched Successfully",
+            problem
+
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            error: "Error while Fetching Problem by id",
+        });
+    }
+};
 
 export const updateProblem = async (req, res) => { };
 

@@ -67,7 +67,7 @@ const sleep = (ms) =>
 export const poolBatchResults =
     async (tokens) => {
 
-        let retries = 20;
+        let retries = 60;
 
         while (retries--) {
 
@@ -111,7 +111,7 @@ export const poolBatchResults =
             }
 
             // wait 10 seconds
-            await sleep(10000);
+            await sleep(1000);
         }
 
         throw new Error(
